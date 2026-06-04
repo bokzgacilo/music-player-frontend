@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Download, Library, Search, Settings, Shield, Trash2, Users } from "lucide-react";
+import { Download, Library, ListMusic, Search, Settings, Shield, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlayerBar } from "@/components/player/player-bar";
 
 const clientNav = [
   { href: "/", label: "Search", icon: Search },
   { href: "/downloads", label: "Downloads", icon: Download },
-  { href: "/library", label: "Library", icon: Library }
+  { href: "/library", label: "Library", icon: Library },
+  { href: "/playlists", label: "Playlists", icon: ListMusic }
 ];
 
 const controlPanelNav = [
