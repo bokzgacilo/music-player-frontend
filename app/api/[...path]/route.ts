@@ -1,4 +1,7 @@
-const backendApiBase = process.env.BACKEND_API_URL || "http://localhost:4000";
+const backendApiBase =
+  process.env.BACKEND_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "production" ? "" : "http://localhost:4000");
 const clientSessionCookie = "musicplayer.clientSession";
 const adminSessionCookie = "musicplayer.adminSession";
 
@@ -40,6 +43,9 @@ function cookieValue(request: Request, name: string) {
 }
 
 function proxiedUrl(request: Request, path: string[]) {
+  if (!backendApiBase) {
+    throw new Error("Missing BACKEND_API_URL for API proxy");
+  }
   const url = new URL(request.url);
   const target = new URL(`/api/${path.join("/")}${url.search}`, backendApiBase);
   return target.toString();
@@ -123,13 +129,22 @@ async function proxy(request: Request, context: RouteContext) {
 
   const method = request.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";
-  const upstream = await fetch(proxiedUrl(request, path), {
-    method,
-    headers: forwardedHeaders(request),
-    body: hasBody ? await request.arrayBuffer() : undefined,
-    cache: "no-store",
-    redirect: "manual"
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(proxiedUrl(request, path), {
+      method,
+      headers: forwardedHeaders(request),
+      body: hasBody ? await request.arrayBuffer() : undefined,
+      cache: "no-store",
+      redirect: "manual"
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to reach backend API";
+    return Response.json(
+      { error: "Backend API unavailable", details: message },
+      { status: 503 }
+    );
+  }
   if (method === "POST" && apiPath === "/api/clients/session") {
     return sessionResponse(upstream, clientSessionCookie);
   }

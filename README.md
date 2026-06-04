@@ -14,6 +14,7 @@ Local:
 
 ```bash
 BACKEND_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_BACKEND_WS_URL=http://localhost:4000
 ```
 
@@ -21,6 +22,7 @@ Production on Vercel:
 
 ```bash
 BACKEND_API_URL=https://api.your-domain.com
+NEXT_PUBLIC_API_URL=https://api.your-domain.com
 NEXT_PUBLIC_BACKEND_WS_URL=https://api.your-domain.com
 ```
 
@@ -56,6 +58,7 @@ In Vercel:
 - Output: Next.js default
 - Environment variables:
   - `BACKEND_API_URL=https://api.your-domain.com`
+  - `NEXT_PUBLIC_API_URL=https://api.your-domain.com`
   - `NEXT_PUBLIC_BACKEND_WS_URL=https://api.your-domain.com`
 
 If you import this as its own repository, no monorepo root-directory setting is needed.
