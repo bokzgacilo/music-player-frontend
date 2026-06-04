@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { PlayerProvider } from "@/components/player/player-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Local Music App",
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PlayerProvider>
           <AppShell>{children}</AppShell>
         </PlayerProvider>
+        <Analytics />
       </body>
     </html>
   );
