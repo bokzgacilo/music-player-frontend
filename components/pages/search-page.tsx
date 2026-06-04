@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Download, Loader2, Search } from "lucide-react";
+import type * as React from "react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import type { SearchResult } from "@/lib/types";
@@ -68,12 +69,16 @@ export function SearchPage() {
       <div className="mt-6">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {results.length === 0 ? <EmptyState>Run a search to see results.</EmptyState> : null}
-          {results.map((result) => {
+          {results.map((result, index) => {
             const isDownloading = downloadingIds.has(result.youtube_id);
             const job = jobs.find((item) => item.youtube_id === result.youtube_id);
             const isAdded = addedIds.has(result.youtube_id) || Boolean(job);
             return (
-            <Card key={result.youtube_id} className="grid overflow-hidden p-0">
+            <Card
+              key={result.youtube_id}
+              className="search-result-card grid overflow-hidden p-0"
+              style={{ "--search-result-delay": `${Math.min(index, 12) * 55}ms` } as React.CSSProperties}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={result.thumbnail ?? ""} alt="" className="aspect-video w-full bg-muted object-cover" />
               <CardContent className="grid gap-3 p-3">

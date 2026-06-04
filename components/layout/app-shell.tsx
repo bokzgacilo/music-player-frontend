@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Download, Library, ListMusic, Search, Settings, Shield, Trash2, Users } from "lucide-react";
+import { Download, Library, ListMusic, LogOut, Search, Settings, Shield, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useClientSession } from "@/components/auth/client-session-provider";
 import { PlayerBar } from "@/components/player/player-bar";
 
 const clientNav = [
@@ -21,6 +23,7 @@ const controlPanelNav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { signOut } = useClientSession();
   return (
     <div className="min-h-screen pb-32">
       <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r bg-card px-4 py-5 lg:block">
@@ -62,7 +65,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </div>
-        <div className="absolute bottom-28 left-4 right-4 grid gap-1 border-t pt-4 text-xs text-muted-foreground">
+        <div className="absolute bottom-28 left-4 right-4 grid gap-2 border-t pt-4 text-xs text-muted-foreground">
+          <Button type="button" variant="outline" size="sm" className="justify-start" onClick={() => signOut()}>
+            <LogOut size={16} />
+            Sign out
+          </Button>
           <Link href="/privacy-policy" className="rounded-md px-3 py-1.5 hover:bg-muted hover:text-foreground">Privacy Policy</Link>
           <Link href="/terms-and-conditions" className="rounded-md px-3 py-1.5 hover:bg-muted hover:text-foreground">Terms and Conditions</Link>
         </div>
@@ -85,6 +92,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
             <Link href="/privacy-policy" className="rounded-md px-2 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">Privacy</Link>
             <Link href="/terms-and-conditions" className="rounded-md px-2 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">Terms</Link>
+            <Button type="button" variant="ghost" size="iconSm" onClick={() => signOut()} aria-label="Sign out">
+              <LogOut size={18} />
+            </Button>
           </nav>
         </div>
       </header>

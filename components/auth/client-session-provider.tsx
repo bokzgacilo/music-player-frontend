@@ -1,8 +1,8 @@
 "use client";
 
 import type * as React from "react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { api, CLIENT_SESSION_KEY, CLIENT_USER_KEY } from "@/lib/api";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { ADMIN_SESSION_KEY, api, CLIENT_SESSION_KEY, CLIENT_USER_KEY } from "@/lib/api";
 import type { ClientUser } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ const avatars = [
 
 type ClientSessionContextValue = {
   user: ClientUser;
+  signOut: () => Promise<void>;
 };
 
 const ClientSessionContext = createContext<ClientSessionContextValue | undefined>(undefined);
@@ -65,7 +66,15 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
     }
   }
 
-  const value = useMemo(() => user ? { user } : undefined, [user]);
+  const signOut = useCallback(async () => {
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => undefined);
+    window.localStorage.removeItem(CLIENT_SESSION_KEY);
+    window.localStorage.removeItem(CLIENT_USER_KEY);
+    window.localStorage.removeItem(ADMIN_SESSION_KEY);
+    setUser(null);
+  }, []);
+
+  const value = useMemo(() => user ? { user, signOut } : undefined, [signOut, user]);
 
   if (loading) {
     return <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">Loading session...</div>;

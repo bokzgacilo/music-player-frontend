@@ -1,6 +1,7 @@
 import type { ClientUser, DownloadJob, Playlist, SearchResult, Song, ToolStatus } from "@/lib/types";
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const apiBase = "";
+const websocketApiBase = process.env.NEXT_PUBLIC_BACKEND_WS_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 export const CLIENT_SESSION_KEY = "musicplayer.clientSession";
 export const CLIENT_USER_KEY = "musicplayer.clientUser";
 export const ADMIN_SESSION_KEY = "musicplayer.adminSession";
@@ -20,7 +21,7 @@ function authHeaders() {
 }
 
 function websocketUrl(path: string, params?: Record<string, string | null | undefined>) {
-  const url = new URL(path, apiBase);
+  const url = new URL(path, websocketApiBase);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value) url.searchParams.set(key, value);
@@ -151,9 +152,9 @@ export const api = {
     return request<void>(`/api/playlists/${id}/songs/${songId}`, { method: "DELETE" });
   },
   streamUrl(songId: number) {
-    return `${apiBase}/api/stream/${songId}`;
+    return `/api/stream/${songId}`;
   },
   thumbnailUrl(songId: number) {
-    return `${apiBase}/api/thumbnails/${songId}`;
+    return `/api/thumbnails/${songId}`;
   }
 };

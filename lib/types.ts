@@ -23,6 +23,9 @@ export type Song = {
   deleted_at: string | null;
   downloaded_by_client_id: number | null;
   downloaded_by_username: string | null;
+  downloaded_by_avatar_path?: string | null;
+  playlist_ids?: number[];
+  playlist_names?: string[];
 };
 
 export type Playlist = {

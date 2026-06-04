@@ -1,6 +1,6 @@
 # Music App Web
 
-Next.js 15 frontend for the music app. This project is safe to deploy to Vercel. It does not store music files or run `yt-dlp`; it talks to the backend API through `NEXT_PUBLIC_API_URL`.
+Next.js 15 frontend for the music app. This project is safe to deploy to Vercel. It does not store music files or run `yt-dlp`; browser HTTP requests go through the Next.js `/api/*` proxy, which forwards to the Express backend through `BACKEND_API_URL`.
 
 ## Environment
 
@@ -13,16 +13,18 @@ cp .env.example .env.local
 Local:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:4000
+BACKEND_API_URL=http://localhost:4000
+NEXT_PUBLIC_BACKEND_WS_URL=http://localhost:4000
 ```
 
 Production on Vercel:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://api.your-domain.com
+BACKEND_API_URL=https://api.your-domain.com
+NEXT_PUBLIC_BACKEND_WS_URL=https://api.your-domain.com
 ```
 
-Your API must allow the Vercel URL in `CORS_ORIGIN`.
+WebSocket connections still open directly from the browser to the backend, so your API must allow the frontend URL in `CORS_ORIGIN`.
 
 ## Local Development
 
@@ -52,8 +54,9 @@ In Vercel:
 - Build command: `npm run build`
 - Install command: `npm install`
 - Output: Next.js default
-- Environment variable:
-  - `NEXT_PUBLIC_API_URL=https://api.your-domain.com`
+- Environment variables:
+  - `BACKEND_API_URL=https://api.your-domain.com`
+  - `NEXT_PUBLIC_BACKEND_WS_URL=https://api.your-domain.com`
 
 If you import this as its own repository, no monorepo root-directory setting is needed.
 

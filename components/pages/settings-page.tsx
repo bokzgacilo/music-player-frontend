@@ -40,7 +40,8 @@ export function SettingsPage() {
             <CardTitle>Environment</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 text-sm text-muted-foreground">
-            <p><code className="text-foreground">NEXT_PUBLIC_API_URL</code> points the web app at the Express API.</p>
+            <p><code className="text-foreground">BACKEND_API_URL</code> points the Next.js API proxy at the Express API.</p>
+            <p><code className="text-foreground">NEXT_PUBLIC_BACKEND_WS_URL</code> points browser WebSockets at the Express API.</p>
             <p><code className="text-foreground">YTDLP_PATH</code> defaults to <code className="text-foreground">yt-dlp</code>.</p>
             <p><code className="text-foreground">FFMPEG_PATH</code> defaults to <code className="text-foreground">ffmpeg</code>.</p>
             <p><code className="text-foreground">DATABASE_PATH</code> defaults to <code className="text-foreground">database/music.db</code>.</p>
