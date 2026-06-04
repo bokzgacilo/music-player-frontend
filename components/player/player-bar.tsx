@@ -16,10 +16,12 @@ import {
   ThumbsDown,
   ThumbsUp,
   Trash2,
-  Volume2
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { formatDuration, cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { usePlayer } from "@/components/player/player-provider";
@@ -39,16 +41,15 @@ export function PlayerBar() {
 
   const seekSlider = (
     <div className="grid gap-1" onClick={stop}>
-      <input
+      <Slider
         aria-label="Seek playback"
-        className="h-1 w-full cursor-pointer accent-primary"
-        type="range"
+        className="cursor-pointer"
         min={0}
         max={safeDuration || 1}
         step={1}
-        value={safeDuration ? safePosition : 0}
+        value={[safeDuration ? safePosition : 0]}
         disabled={!player.current}
-        onChange={(event) => player.seek(Number(event.target.value))}
+        onValueChange={([value]) => player.seek(value)}
       />
       <div className="flex justify-between text-[11px] text-white/55">
         <span>{formatDuration(safePosition)}</span>
@@ -170,7 +171,16 @@ export function PlayerBar() {
             <Button variant="ghost" size="icon" className="hidden text-white/75 hover:bg-white/10 hover:text-white sm:inline-flex" aria-label="Dislike"><ThumbsDown size={18} /></Button>
             <Button variant="ghost" size="icon" className="hidden text-white/75 hover:bg-white/10 hover:text-white sm:inline-flex" aria-label="Like"><ThumbsUp size={18} /></Button>
             <Button variant="ghost" size="icon" className="text-white/75 hover:bg-white/10 hover:text-white" aria-label="More"><MoreVertical size={18} /></Button>
-            <Button variant="ghost" size="icon" className="hidden text-white/75 hover:bg-white/10 hover:text-white sm:inline-flex" aria-label="Volume"><Volume2 size={18} /></Button>
+            <div className="hidden w-32 items-center gap-2 text-white/75 sm:flex">
+              {player.volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              <Slider
+                aria-label="Volume"
+                max={100}
+                step={1}
+                value={[Math.round(player.volume * 100)]}
+                onValueChange={([value]) => player.setVolume(value / 100)}
+              />
+            </div>
             <Button variant={player.shuffle ? "secondary" : "ghost"} size="icon" className="text-white/75 hover:bg-white/10 hover:text-white" onClick={() => player.setShuffle(!player.shuffle)} aria-label="Shuffle"><Shuffle size={18} /></Button>
             <Button
               variant={player.repeat !== "off" ? "secondary" : "ghost"}

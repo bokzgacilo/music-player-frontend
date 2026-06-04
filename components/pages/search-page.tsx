@@ -1,33 +1,26 @@
 "use client";
 
-import { Download, Loader2, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Download, Loader2, Search } from "lucide-react";
+import { useState } from "react";
 import { api } from "@/lib/api";
-import type { DownloadJob, SearchResult } from "@/lib/types";
+import type { SearchResult } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/common/page-header";
+import { EmptyState } from "@/components/common/empty-state";
+import { useAppStream } from "@/components/app/app-stream-provider";
 
 export function SearchPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [jobs, setJobs] = useState<DownloadJob[]>([]);
+  const { jobs } = useAppStream();
   const [loading, setLoading] = useState(false);
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string>();
-
-  async function refreshJobs() {
-    const payload = await api.downloads().catch(() => ({ jobs: [] }));
-    setJobs(payload.jobs);
-  }
-
-  useEffect(() => {
-    refreshJobs();
-    const timer = window.setInterval(refreshJobs, 1500);
-    return () => window.clearInterval(timer);
-  }, []);
 
   async function runSearch() {
     if (!query.trim()) return;
@@ -48,7 +41,7 @@ export function SearchPage() {
     setError(undefined);
     try {
       await api.download(result);
-      await refreshJobs();
+      setAddedIds((current) => new Set(current).add(result.youtube_id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Download failed");
     } finally {
@@ -61,36 +54,41 @@ export function SearchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto">
       <PageHeader eyebrow="Search" title="Search YouTube audio" description="The backend searches with yt-dlp using ytsearch20 and queues MP3 downloads locally." />
       <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(event) => { event.preventDefault(); runSearch(); }}>
         <Input placeholder="Search for a song, artist, or album" value={query} onChange={(event) => setQuery(event.target.value)} />
         <Button disabled={loading || !query.trim()}><Search size={17} />{loading ? "Searching" : "Search"}</Button>
       </form>
-      {error ? <p className="mt-4 rounded-md border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</p> : null}
+      {error ? (
+        <Alert className="mt-4" variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
       <div className="mt-6">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {results.length === 0 ? <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">Run a search to see results.</p> : null}
+          {results.length === 0 ? <EmptyState>Run a search to see results.</EmptyState> : null}
           {results.map((result) => {
             const isDownloading = downloadingIds.has(result.youtube_id);
-            const activeJob = jobs.find((job) => job.youtube_id === result.youtube_id && ["queued", "downloading", "processing"].includes(job.status));
+            const job = jobs.find((item) => item.youtube_id === result.youtube_id);
+            const isAdded = addedIds.has(result.youtube_id) || Boolean(job);
             return (
             <Card key={result.youtube_id} className="grid overflow-hidden p-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={result.thumbnail ?? ""} alt="" className="aspect-video w-full bg-muted object-cover" />
-              <div className="grid gap-3 p-3">
+              <CardContent className="grid gap-3 p-3">
                 <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{result.title}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {result.artist} • {formatDuration(result.duration)}
-                  {activeJob ? ` • ${activeJob.status} ${Math.round(activeJob.progress)}%` : ""}
+                  {job ? ` • ${job.status} ${Math.round(job.progress)}%` : ""}
                 </p>
               </div>
-                <Button className="w-full" onClick={() => download(result)} disabled={isDownloading || Boolean(activeJob)}>
-                  {isDownloading || activeJob ? <Loader2 className="animate-spin" size={17} /> : <Download size={17} />}
-                  {activeJob ? "Queued" : isDownloading ? "Starting" : "Download"}
+                <Button className="w-full" onClick={() => download(result)} disabled={isDownloading || isAdded}>
+                  {isDownloading ? <Loader2 className="animate-spin" size={17} /> : isAdded ? <Check size={17} /> : <Download size={17} />}
+                  {isDownloading ? "Starting" : isAdded ? "Added" : "Download"}
                 </Button>
-              </div>
+              </CardContent>
             </Card>
             );
           })}

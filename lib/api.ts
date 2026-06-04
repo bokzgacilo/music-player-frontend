@@ -1,12 +1,39 @@
-import type { DownloadJob, Playlist, SearchResult, Song, ToolStatus } from "@/lib/types";
+import type { ClientUser, DownloadJob, Playlist, SearchResult, Song, ToolStatus } from "@/lib/types";
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export const CLIENT_SESSION_KEY = "musicplayer.clientSession";
+export const CLIENT_USER_KEY = "musicplayer.clientUser";
+export const ADMIN_SESSION_KEY = "musicplayer.adminSession";
+
+function getStoredValue(key: string) {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(key);
+}
+
+function authHeaders() {
+  const headers: Record<string, string> = {};
+  const clientSession = getStoredValue(CLIENT_SESSION_KEY);
+  const adminSession = getStoredValue(ADMIN_SESSION_KEY);
+  if (clientSession) headers["x-client-session"] = clientSession;
+  if (adminSession) headers["x-admin-session"] = adminSession;
+  return headers;
+}
+
+function websocketUrl(path: string, params?: Record<string, string | null | undefined>) {
+  const url = new URL(path, apiBase);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value) url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
       ...init?.headers
     },
     cache: "no-store"
@@ -24,6 +51,27 @@ export const api = {
   search(q: string) {
     return request<{ results: SearchResult[] }>(`/api/search?q=${encodeURIComponent(q)}`);
   },
+  createClientSession(username: string, avatarPath: string, userAgent: string) {
+    return request<{ token: string; user: ClientUser }>("/api/clients/session", {
+      method: "POST",
+      body: JSON.stringify({ username, avatarPath, userAgent })
+    });
+  },
+  me() {
+    return request<{ user: ClientUser }>("/api/clients/me");
+  },
+  adminLogin(username: string, password: string) {
+    return request<{ token: string; username: string }>("/api/admin/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password })
+    });
+  },
+  adminMe() {
+    return request<{ ok: true; username: string }>("/api/admin/me");
+  },
+  adminClients() {
+    return request<{ users: ClientUser[] }>("/api/admin/clients");
+  },
   download(result: SearchResult) {
     return request<{ duplicate: boolean; jobId?: number }>("/api/download", {
       method: "POST",
@@ -32,6 +80,18 @@ export const api = {
   },
   downloads() {
     return request<{ jobs: DownloadJob[] }>("/api/downloads");
+  },
+  downloadsStreamUrl() {
+    return websocketUrl("/api/downloads/stream");
+  },
+  appStreamUrl() {
+    return websocketUrl("/api/stream", {
+      clientSession: getStoredValue(CLIENT_SESSION_KEY),
+      adminSession: getStoredValue(ADMIN_SESSION_KEY)
+    });
+  },
+  retryDownload(id: number) {
+    return request<{ job: DownloadJob }>(`/api/downloads/${id}/retry`, { method: "POST" });
   },
   tools() {
     return request<{ tools: ToolStatus[] }>("/api/tools");
@@ -55,7 +115,7 @@ export const api = {
     return request<{ song: Song }>(`/api/library/${id}/favorite`, { method: "POST" });
   },
   playlists() {
-    return request<{ playlists: Playlist[] }>("/api/playlists");
+    return request<{ playlists: Playlist[]; mine: Playlist[]; public: Playlist[] }>("/api/playlists");
   },
   playlist(id: number) {
     return request<{ playlist: Playlist; songs: Song[] }>(`/api/playlists/${id}`);
@@ -70,6 +130,12 @@ export const api = {
     return request<{ playlist: Playlist }>(`/api/playlists/${id}`, {
       method: "PUT",
       body: JSON.stringify({ name })
+    });
+  },
+  setPlaylistSharing(id: number, isShared: boolean) {
+    return request<{ playlist: Playlist }>(`/api/playlists/${id}/share`, {
+      method: "PUT",
+      body: JSON.stringify({ is_shared: isShared })
     });
   },
   deletePlaylist(id: number) {

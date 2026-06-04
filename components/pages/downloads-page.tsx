@@ -1,25 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import type { DownloadJob } from "@/lib/types";
 import { PageHeader } from "@/components/common/page-header";
 import { DownloadJobs } from "@/components/music/download-jobs";
-import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/common/empty-state";
+import { StatCard } from "@/components/common/stat-card";
+import { useAppStream } from "@/components/app/app-stream-provider";
 
 export function DownloadsPage() {
-  const [jobs, setJobs] = useState<DownloadJob[]>([]);
+  const { jobs } = useAppStream();
+  const [retryingIds, setRetryingIds] = useState<Set<number>>(new Set());
 
-  async function load() {
-    const payload = await api.downloads().catch(() => ({ jobs: [] }));
-    setJobs(payload.jobs);
+  async function retryDownload(id: number) {
+    setRetryingIds((current) => new Set(current).add(id));
+    try {
+      await api.retryDownload(id);
+    } finally {
+      setRetryingIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
   }
-
-  useEffect(() => {
-    load();
-    const timer = window.setInterval(load, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   const counts = useMemo(() => ({
     queued: jobs.filter((job) => job.status === "queued").length,
@@ -29,15 +33,19 @@ export function DownloadsPage() {
   }), [jobs]);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto">
       <PageHeader eyebrow="Downloads" title="Download queue" description="Track queued, active, completed, and failed downloads from yt-dlp." />
       <div className="mb-6 grid gap-3 sm:grid-cols-4">
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Queued</p><p className="mt-1 text-2xl font-semibold">{counts.queued}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Active</p><p className="mt-1 text-2xl font-semibold">{counts.active}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Completed</p><p className="mt-1 text-2xl font-semibold">{counts.completed}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Failed</p><p className="mt-1 text-2xl font-semibold">{counts.failed}</p></Card>
+        <StatCard label="Queued" value={counts.queued} />
+        <StatCard label="Active" value={counts.active} />
+        <StatCard label="Completed" value={counts.completed} />
+        <StatCard label="Failed" value={counts.failed} />
       </div>
-      {jobs.length ? <DownloadJobs jobs={jobs} limit={100} /> : <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">No download jobs yet.</p>}
+      {jobs.length ? (
+        <DownloadJobs jobs={jobs} limit={100} onRetry={retryDownload} retryingIds={retryingIds} />
+      ) : (
+        <EmptyState>No download jobs yet.</EmptyState>
+      )}
     </div>
   );
 }

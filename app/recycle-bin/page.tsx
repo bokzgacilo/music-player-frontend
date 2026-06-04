@@ -1,5 +1,5 @@
-import { RecycleBinPage } from "@/components/pages/recycle-bin-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <RecycleBinPage />;
+  redirect("/control-panel/recycle-bin");
 }

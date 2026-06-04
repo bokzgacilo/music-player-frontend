@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { ToolStatus } from "@/lib/types";
 import { PageHeader } from "@/components/common/page-header";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function SettingsPage() {
   const [tools, setTools] = useState<ToolStatus[]>([]);
@@ -19,23 +20,24 @@ export function SettingsPage() {
       <div className="grid gap-4">
         <Card>
           <CardHeader>
-            <h2 className="font-semibold">Tool status</h2>
+            <CardTitle>Tool status</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 text-sm text-muted-foreground">
             {tools.length === 0 ? <p>Checking API tools...</p> : null}
-            {tools.map((tool) => (
-              <p key={tool.name}>
-                <code className="text-foreground">{tool.name}</code>:{" "}
-                <span className={tool.available ? "text-emerald-300" : "text-red-300"}>
-                  {tool.available ? `available at ${tool.resolvedPath}` : `missing; configured as ${tool.configuredPath}`}
-                </span>
-              </p>
-            ))}
+            {tools.map((tool) => {
+              const message = tool.available ? `available at ${tool.resolvedPath}` : `missing; configured as ${tool.configuredPath}`;
+              return (
+                <div key={tool.name} className="grid gap-2 rounded-md border bg-background p-3 sm:grid-cols-[auto_1fr] sm:items-center">
+                  <Badge variant={tool.available ? "secondary" : "destructive"}>{tool.name}</Badge>
+                  <p className={tool.available ? "text-emerald-300" : "text-red-300"}>{message}</p>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <h2 className="font-semibold">Environment</h2>
+            <CardTitle>Environment</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 text-sm text-muted-foreground">
             <p><code className="text-foreground">NEXT_PUBLIC_API_URL</code> points the web app at the Express API.</p>
@@ -46,7 +48,7 @@ export function SettingsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <h2 className="font-semibold">Storage</h2>
+            <CardTitle>Storage</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 text-sm text-muted-foreground">
             <p>Audio files are saved in <code className="text-foreground">storage/music/</code>.</p>

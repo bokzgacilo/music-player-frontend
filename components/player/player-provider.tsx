@@ -12,6 +12,7 @@ type PlayerContextValue = {
   playing: boolean;
   position: number;
   duration: number;
+  volume: number;
   shuffle: boolean;
   repeat: RepeatMode;
   play: (song: Song, queue?: Song[]) => void;
@@ -24,6 +25,7 @@ type PlayerContextValue = {
   removeFromQueue: (songId: number) => void;
   moveQueueSong: (songId: number, direction: "up" | "down") => void;
   clearQueue: () => void;
+  setVolume: (value: number) => void;
   setShuffle: (value: boolean) => void;
   setRepeat: (value: RepeatMode) => void;
 };
@@ -37,6 +39,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolumeState] = useState(0.8);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
 
@@ -132,12 +135,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [current, ensureAudio, playing]);
 
+  const setVolume = useCallback((value: number) => {
+    const nextVolume = Math.max(0, Math.min(1, value));
+    setVolumeState(nextVolume);
+    ensureAudio().volume = nextVolume;
+  }, [ensureAudio]);
+
   const value = useMemo(() => ({
     queue,
     current,
     playing,
     position,
     duration: duration || current?.duration || 0,
+    volume,
     shuffle,
     repeat,
     play,
@@ -150,9 +160,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     removeFromQueue,
     moveQueueSong,
     clearQueue,
+    setVolume,
     setShuffle,
     setRepeat
-  }), [clearQueue, current, duration, moveQueueSong, next, play, playQueueIndex, playing, position, previous, queue, refreshCurrent, removeFromQueue, repeat, seek, shuffle, toggle]);
+  }), [clearQueue, current, duration, moveQueueSong, next, play, playQueueIndex, playing, position, previous, queue, refreshCurrent, removeFromQueue, repeat, seek, setVolume, shuffle, toggle, volume]);
+
+  useEffect(() => {
+    const savedVolume = window.localStorage.getItem("musicplayer.volume");
+    if (!savedVolume) return;
+    const parsed = Number(savedVolume);
+    if (Number.isFinite(parsed)) {
+      setVolume(parsed);
+    }
+  }, [setVolume]);
+
+  useEffect(() => {
+    ensureAudio().volume = volume;
+    window.localStorage.setItem("musicplayer.volume", String(volume));
+  }, [ensureAudio, volume]);
 
   useEffect(() => {
     const audio = ensureAudio();

@@ -21,11 +21,16 @@ export type Song = {
   downloaded_at: string;
   deleted: 0 | 1;
   deleted_at: string | null;
+  downloaded_by_client_id: number | null;
+  downloaded_by_username: string | null;
 };
 
 export type Playlist = {
   id: number;
   name: string;
+  created_by_client_id: number | null;
+  created_by_username: string | null;
+  is_shared: 0 | 1;
   created_at: string;
   updated_at: string;
 };
@@ -37,8 +42,34 @@ export type DownloadJob = {
   status: "queued" | "downloading" | "processing" | "completed" | "failed";
   progress: number;
   error_message: string | null;
+  requested_by_client_id: number | null;
+  requested_by_username: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ConnectedClient = {
+  id: string;
+  userId: number | null;
+  username: string;
+  avatarPath?: string;
+  connectedAt: string;
+  lastSeenAt: string;
+  userAgent: string;
+  ipAddress: string;
+  origin: string | null;
+  path: string | null;
+  isAdmin: boolean;
+};
+
+export type ClientUser = {
+  id: number;
+  username: string;
+  avatarPath: string;
+  userAgent: string;
+  createdAt: string;
+  lastSeenAt: string;
+  sessionCount?: number;
 };
 
 export type ToolStatus = {

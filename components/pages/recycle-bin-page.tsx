@@ -8,6 +8,7 @@ import { formatDuration } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/page-header";
+import { EmptyState } from "@/components/common/empty-state";
 
 export function RecycleBinPage() {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -27,7 +28,7 @@ export function RecycleBinPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto">
       <PageHeader
         eyebrow="Recycle Bin"
         title="Deleted songs"
@@ -35,7 +36,7 @@ export function RecycleBinPage() {
       />
       <div className="grid gap-2">
         {songs.length === 0 ? (
-          <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">Recycle bin is empty.</p>
+          <EmptyState>Recycle bin is empty.</EmptyState>
         ) : null}
         {songs.map((song) => (
           <Card key={song.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3">
@@ -53,6 +54,9 @@ export function RecycleBinPage() {
               <p className="truncate text-xs text-muted-foreground">
                 {song.artist} • {formatDuration(song.duration)} • deleted {song.deleted_at ? new Date(song.deleted_at).toLocaleString() : "recently"}
               </p>
+              {song.downloaded_by_username ? (
+                <p className="mt-1 truncate text-[11px] text-muted-foreground">Downloaded by {song.downloaded_by_username}</p>
+              ) : null}
               <p className="mt-1 truncate text-[11px] text-muted-foreground">
                 MP3: {song.file_path} {song.thumbnail_path ? `• Thumbnail: ${song.thumbnail_path}` : ""}
               </p>
