@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Download, Library, ListMusic, LogOut, Search, Settings, Shield, Trash2, Users } from "lucide-react";
+import { Download, Library, ListMusic, LogOut, Search, Settings, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useClientSession } from "@/components/auth/client-session-provider";
@@ -16,7 +16,6 @@ const clientNav = [
 ];
 
 const controlPanelNav = [
-  { href: "/control-panel/recycle-bin", label: "Recycle Bin", icon: Trash2 },
   { href: "/control-panel/users", label: "Users", icon: Users },
   { href: "/control-panel/settings", label: "Settings", icon: Settings }
 ];

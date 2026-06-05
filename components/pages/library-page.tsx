@@ -1,13 +1,15 @@
 "use client";
 
 import { Grid3X3, List, RefreshCw, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { api } from "@/lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ADMIN_SESSION_KEY, api } from "@/lib/api";
 import type { Playlist, Song } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/common/page-header";
 import { SongList } from "@/components/music/song-list";
+
+const libraryPageSize = 32;
 
 export function LibraryPage() {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -15,41 +17,78 @@ export function LibraryPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  async function load() {
+  const loadFirstPage = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [libraryPayload, playlistPayload] = await Promise.all([api.library(), api.playlists()]);
+      const [libraryPayload, playlistPayload] = await Promise.all([
+        api.library({ limit: libraryPageSize, offset: 0, q: query.trim() || undefined }),
+        api.playlists()
+      ]);
       setSongs(libraryPayload.songs);
+      setHasMore(libraryPayload.hasMore);
+      setNextOffset(libraryPayload.nextOffset);
       setPlaylists(playlistPayload.playlists);
     } finally {
       setRefreshing(false);
     }
+  }, [query]);
+
+  const loadNextPage = useCallback(async () => {
+    if (!hasMore || loadingMore || refreshing) return;
+    setLoadingMore(true);
+    try {
+      const libraryPayload = await api.library({ limit: libraryPageSize, offset: nextOffset, q: query.trim() || undefined });
+      setSongs((current) => [...current, ...libraryPayload.songs]);
+      setHasMore(libraryPayload.hasMore);
+      setNextOffset(libraryPayload.nextOffset);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, nextOffset, query, refreshing]);
+
+  async function refresh() {
+    await loadFirstPage();
+  }
+
+  async function deleteSong(song: Song) {
+    await api.adminDeleteSong(song.id);
+    await loadFirstPage();
   }
 
   useEffect(() => {
-    load().catch(() => undefined);
+    setIsAdmin(Boolean(window.localStorage.getItem(ADMIN_SESSION_KEY)));
   }, []);
 
-  const filteredSongs = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return songs;
-    return songs.filter((song) => {
-      const haystack = [
-        song.title,
-        song.artist,
-        song.downloaded_by_username,
-        song.downloaded_at
-      ].filter(Boolean).join(" ").toLowerCase();
-      return haystack.includes(normalized);
-    });
-  }, [query, songs]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadFirstPage().catch(() => undefined);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [loadFirstPage]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        loadNextPage().catch(() => undefined);
+      }
+    }, { rootMargin: "600px 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadNextPage]);
 
   return (
     <div className="mx-auto">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-        <PageHeader eyebrow="Library" title="Downloaded music" description="Only active songs are shown here. Deleted songs are flagged in SQLite and can be restored from Recycle Bin." />
-        <Button variant="outline" onClick={() => load().catch(() => undefined)} disabled={refreshing}>
+        <PageHeader eyebrow="Library" title="Downloaded music" description="Only active songs are shown here. Admin deletes remove the song from the database and storage." />
+        <Button variant="outline" onClick={() => refresh().catch(() => undefined)} disabled={refreshing}>
           <RefreshCw className={refreshing ? "animate-spin" : ""} size={17} />
           Refresh
         </Button>
@@ -70,7 +109,16 @@ export function LibraryPage() {
           </Button>
         </div>
       </div>
-      <SongList songs={filteredSongs} playlists={playlists} onChanged={load} variant={view} />
+      <SongList
+        songs={songs}
+        playlists={playlists}
+        onChanged={refresh}
+        onDeleteSong={isAdmin ? deleteSong : undefined}
+        variant={view}
+      />
+      <div ref={loadMoreRef} className="h-12" />
+      {loadingMore ? <p className="py-3 text-center text-sm text-muted-foreground">Loading more songs...</p> : null}
+      {!hasMore && songs.length ? <p className="py-3 text-center text-sm text-muted-foreground">End of library</p> : null}
     </div>
   );
 }

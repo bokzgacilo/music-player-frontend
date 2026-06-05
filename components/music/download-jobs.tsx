@@ -1,11 +1,12 @@
 "use client";
 
+import type * as React from "react";
 import type { DownloadJob } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Clock, Gauge, HardDrive, Loader2, RotateCcw } from "lucide-react";
 
 const activeStatuses = new Set(["queued", "downloading", "processing"]);
 
@@ -51,6 +52,11 @@ export function DownloadJobs({
             {Math.round(job.progress)}%
             {job.requested_by_username ? ` • requested by ${job.requested_by_username}` : ""}
           </p>
+          <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+            <JobMeta icon={<Clock size={14} />} label="Download time" value={formatElapsed(job.downloadDurationSeconds)} />
+            <JobMeta icon={<HardDrive size={14} />} label="File size" value={formatBytes(job.fileSizeBytes)} />
+            <JobMeta icon={<Gauge size={14} />} label="Bitrate" value={job.bitrateKbps ? `${job.bitrateKbps} kbps` : "Unavailable"} />
+          </div>
           {job.error_message ? <p className="mt-2 text-xs text-red-300">{job.error_message}</p> : null}
           </CardContent>
         </Card>
@@ -58,4 +64,37 @@ export function DownloadJobs({
       })}
     </section>
   );
+}
+
+function JobMeta({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-md border bg-background px-3 py-2">
+      <span className="shrink-0">{icon}</span>
+      <span className="shrink-0 font-medium text-foreground">{label}</span>
+      <span className="truncate">{value}</span>
+    </div>
+  );
+}
+
+function formatElapsed(seconds?: number | null) {
+  if (seconds == null) return "Unavailable";
+  const safeSeconds = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainingSeconds = String(safeSeconds % 60).padStart(2, "0");
+  if (minutes < 60) return `${minutes}:${remainingSeconds}`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = String(minutes % 60).padStart(2, "0");
+  return `${hours}:${remainingMinutes}:${remainingSeconds}`;
+}
+
+function formatBytes(bytes?: number | null) {
+  if (!bytes) return "Unavailable";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }

@@ -49,6 +49,9 @@ export type DownloadJob = {
   requested_by_username: string | null;
   created_at: string;
   updated_at: string;
+  downloadDurationSeconds?: number | null;
+  fileSizeBytes?: number | null;
+  bitrateKbps?: number | null;
 };
 
 export type ConnectedClient = {
@@ -63,6 +66,15 @@ export type ConnectedClient = {
   origin: string | null;
   path: string | null;
   isAdmin: boolean;
+  nowPlaying: {
+    songId: number;
+    title: string;
+    artist: string;
+    position: number;
+    duration: number | null;
+    playing: boolean;
+    reportedAt: string;
+  } | null;
 };
 
 export type ClientUser = {

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAppStream } from "@/components/app/app-stream-provider";
 import { api } from "@/lib/api";
 import type { Song } from "@/lib/types";
 
@@ -33,7 +34,14 @@ type PlayerContextValue = {
 const PlayerContext = createContext<PlayerContextValue | null>(null);
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
+  const { sendPlayerState } = useAppStream();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerSnapshotRef = useRef<{
+    current?: Song;
+    playing: boolean;
+    position: number;
+    duration: number;
+  }>({ playing: false, position: 0, duration: 0 });
   const [queue, setQueue] = useState<Song[]>([]);
   const [current, setCurrent] = useState<Song | undefined>();
   const [playing, setPlaying] = useState(false);
@@ -203,6 +211,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("ended", onEnded);
     };
   }, [ensureAudio, next, repeat]);
+
+  useEffect(() => {
+    playerSnapshotRef.current = { current, playing, position, duration: duration || current?.duration || 0 };
+  }, [current, duration, playing, position]);
+
+  useEffect(() => {
+    function reportPlayerState() {
+      const snapshot = playerSnapshotRef.current;
+      sendPlayerState({
+        song: snapshot.current ? {
+          id: snapshot.current.id,
+          title: snapshot.current.title,
+          artist: snapshot.current.artist
+        } : null,
+        position: snapshot.position,
+        duration: snapshot.duration || null,
+        playing: snapshot.playing
+      });
+    }
+
+    reportPlayerState();
+    const timer = window.setInterval(reportPlayerState, 5000);
+    return () => window.clearInterval(timer);
+  }, [current?.id, playing, sendPlayerState]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

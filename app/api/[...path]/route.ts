@@ -31,8 +31,7 @@ const publicRoutes = new Set([
 
 const adminRoutePrefixes = [
   "/api/admin",
-  "/api/tools",
-  "/api/recycle-bin"
+  "/api/tools"
 ];
 
 function cookieValue(request: Request, name: string) {

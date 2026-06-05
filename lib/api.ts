@@ -79,8 +79,19 @@ export const api = {
       body: JSON.stringify(result)
     });
   },
-  downloads() {
-    return request<{ jobs: DownloadJob[] }>("/api/downloads");
+  downloads(params?: { page?: number; pageSize?: number }) {
+    const search = new URLSearchParams();
+    if (params?.page) search.set("page", String(params.page));
+    if (params?.pageSize) search.set("pageSize", String(params.pageSize));
+    const suffix = search.toString() ? `?${search.toString()}` : "";
+    return request<{
+      jobs: DownloadJob[];
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+      summary: { queued: number; active: number; completed: number; failed: number };
+    }>(`/api/downloads${suffix}`);
   },
   downloadsStreamUrl() {
     return websocketUrl("/api/downloads/stream");
@@ -97,17 +108,19 @@ export const api = {
   tools() {
     return request<{ tools: ToolStatus[] }>("/api/tools");
   },
-  library() {
-    return request<{ songs: Song[] }>("/api/library");
-  },
-  recycleBin() {
-    return request<{ songs: Song[] }>("/api/recycle-bin");
+  library(params?: { limit?: number; offset?: number; q?: string }) {
+    const search = new URLSearchParams();
+    if (params?.limit) search.set("limit", String(params.limit));
+    if (params?.offset) search.set("offset", String(params.offset));
+    if (params?.q) search.set("q", params.q);
+    const suffix = search.toString() ? `?${search.toString()}` : "";
+    return request<{ songs: Song[]; hasMore: boolean; nextOffset: number }>(`/api/library${suffix}`);
   },
   deleteSong(id: number) {
     return request<{ ok: true }>(`/api/library/${id}`, { method: "DELETE" });
   },
-  restoreSong(id: number) {
-    return request<{ song: Song }>(`/api/recycle-bin/${id}/restore`, { method: "POST" });
+  adminDeleteSong(id: number) {
+    return request<{ ok: true }>(`/api/admin/songs/${id}`, { method: "DELETE" });
   },
   markPlayed(id: number) {
     return request<{ song: Song }>(`/api/library/${id}/play`, { method: "POST" });

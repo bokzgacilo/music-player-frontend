@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Heart, ListPlus, Play, Plus } from "lucide-react";
+import { Heart, ListPlus, Play, Plus, ThumbsUp, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import type { Playlist, Song } from "@/lib/types";
@@ -12,39 +12,80 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
 import { usePlayer } from "@/components/player/player-provider";
 
-export function SongList({ songs, playlists = [], onChanged, variant = "list" }: { songs: Song[]; playlists?: Playlist[]; onChanged?: () => void; variant?: "list" | "grid" }) {
+export function SongList({
+  songs,
+  playlists = [],
+  onChanged,
+  onDeleteSong,
+  variant = "list"
+}: {
+  songs: Song[];
+  playlists?: Playlist[];
+  onChanged?: () => void;
+  onDeleteSong?: (song: Song) => Promise<void> | void;
+  variant?: "list" | "grid";
+}) {
   const player = usePlayer();
+  const [deletingSongId, setDeletingSongId] = useState<number | null>(null);
+
+  async function deleteSong(song: Song) {
+    if (!onDeleteSong) return;
+    const confirmed = window.confirm(`Permanently delete "${song.title}" from the database and storage?`);
+    if (!confirmed) return;
+
+    setDeletingSongId(song.id);
+    try {
+      await onDeleteSong(song);
+      onChanged?.();
+    } finally {
+      setDeletingSongId(null);
+    }
+  }
+
   if (songs.length === 0) {
     return <EmptyState>No songs yet.</EmptyState>;
   }
 
   if (variant === "grid") {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {songs.map((song) => {
           return (
             <Card key={song.id} className="overflow-hidden p-0">
-              <button className="group relative aspect-square w-full bg-muted text-left" onClick={() => player.play(song, songs)} aria-label={`Play ${song.title}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={api.thumbnailUrl(song.id)} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
-                <span className="absolute inset-0 grid place-items-center bg-black/35 opacity-0 transition group-hover:opacity-100">
-                  <span className="grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground">
-                    <Play size={20} fill="currentColor" />
+              <div className="relative aspect-square w-full bg-muted">
+                <button className="group h-full w-full text-left" onClick={() => player.play(song, songs)} aria-label={`Play ${song.title}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={api.thumbnailUrl(song.id)} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                  <span className="absolute inset-0 grid place-items-center bg-black/35 opacity-0 transition group-hover:opacity-100">
+                    <span className="grid h-11 w-11 place-items-center rounded-full bg-primary text-primary-foreground">
+                      <Play size={19} fill="currentColor" />
+                    </span>
                   </span>
-                </span>
-              </button>
-              <CardContent className="grid gap-4 p-4">
+                </button>
+                {onDeleteSong ? (
+                  <Button className="absolute left-2 top-2 bg-background/90 shadow-sm backdrop-blur hover:bg-background" variant="ghost" size="iconSm" onClick={() => deleteSong(song)} disabled={deletingSongId === song.id} aria-label="Delete song permanently">
+                    <Trash2 size={15} />
+                  </Button>
+                ) : null}
+              </div>
+              <CardContent className="grid gap-3 p-3">
                 <div className="min-w-0">
-                  <ScrollingTitle title={song.title} className="text-lg font-semibold leading-tight" />
-                  <p className="mt-2 truncate text-sm text-muted-foreground">
-                    Played {song.play_count} | Like {song.favorite ? 1 : 0}
-                  </p>
+                  <TwoLineTitle title={song.title} className="text-base font-semibold leading-tight" />
+                  <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Play size={14} fill="currentColor" />
+                      {song.play_count}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <ThumbsUp size={14} />
+                      {song.favorite ? 1 : 0}
+                    </span>
+                  </div>
                   <UserDateLine song={song} />
                 </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
-                  <Button className="h-12 text-base" onClick={() => player.play(song, songs)}><Play size={20} /> Play now</Button>
-                  <Button variant="ghost" size="icon" onClick={() => api.favorite(song.id).then(onChanged)} aria-label="Favorite song">
-                    <Heart size={22} fill={song.favorite ? "currentColor" : "none"} />
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="iconSm" onClick={() => api.favorite(song.id).then(onChanged)} aria-label="Favorite song">
+                    <Heart size={16} fill={song.favorite ? "currentColor" : "none"} />
                   </Button>
                   {playlists.length ? (
                     <PlaylistMembershipModal song={song} playlists={playlists} onChanged={onChanged} label="Edit playlists" iconOnly />
@@ -63,19 +104,26 @@ export function SongList({ songs, playlists = [], onChanged, variant = "list" }:
       {songs.map((song) => {
         return (
           <Card key={song.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3">
-            <button className="relative h-16 w-16 overflow-hidden rounded-md bg-muted" onClick={() => player.play(song, songs)} aria-label={`Play ${song.title}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={api.thumbnailUrl(song.id)} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
-              <span className="absolute inset-0 grid place-items-center bg-black/30 text-white opacity-0 transition hover:opacity-100">
-                <Play size={17} fill="currentColor" />
-              </span>
-            </button>
+            <div className="relative h-16 w-16 overflow-hidden rounded-md bg-muted">
+              <button className="h-full w-full" onClick={() => player.play(song, songs)} aria-label={`Play ${song.title}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={api.thumbnailUrl(song.id)} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                <span className="absolute inset-0 grid place-items-center bg-black/30 text-white opacity-0 transition hover:opacity-100">
+                  <Play size={17} fill="currentColor" />
+                </span>
+              </button>
+              {onDeleteSong ? (
+                <Button className="absolute left-1 top-1 h-6 w-6 bg-background/90 shadow-sm backdrop-blur hover:bg-background" variant="ghost" size="iconSm" onClick={() => deleteSong(song)} disabled={deletingSongId === song.id} aria-label="Delete song permanently">
+                  <Trash2 size={13} />
+                </Button>
+              ) : null}
+            </div>
             <div className="min-w-0">
               <ScrollingTitle title={song.title} className="text-sm font-medium" />
               <p className="truncate text-xs text-muted-foreground">
                 {song.artist} • {formatDuration(song.duration)} • Played {song.play_count} • Added {new Date(song.downloaded_at).toLocaleDateString()}
               </p>
-              <p className="truncate text-[11px] text-muted-foreground">Added by {song.downloaded_by_username ?? "Unknown"}</p>
+              <p className="truncate text-[11px] text-muted-foreground">{song.downloaded_by_username ?? "Unknown"}</p>
               <PlaylistIndicator names={song.playlist_names ?? []} compact />
             </div>
             <div className="flex items-center gap-1">
@@ -97,11 +145,16 @@ export function SongList({ songs, playlists = [], onChanged, variant = "list" }:
 function ScrollingTitle({ title, className }: { title: string; className?: string }) {
   return (
     <div className={cn("song-title-marquee overflow-hidden", className)} title={title}>
-      <span className="song-title-marquee-track">
-        <span>{title}</span>
-        <span aria-hidden="true">{title}</span>
-      </span>
+      <span className="song-title-marquee-track">{title}</span>
     </div>
+  );
+}
+
+function TwoLineTitle({ title, className }: { title: string; className?: string }) {
+  return (
+    <p className={cn("song-title-two-line min-h-[2.5em]", className)} title={title}>
+      {title}
+    </p>
   );
 }
 
@@ -111,7 +164,7 @@ function UserDateLine({ song }: { song: Song }) {
     <div className="mt-2 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={avatarPath} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
-      <span className="min-w-0 truncate">by {song.downloaded_by_username ?? "Unknown"}</span>
+      <span className="min-w-0 truncate">{song.downloaded_by_username ?? "Unknown"}</span>
       <span className="shrink-0">|</span>
       <span className="shrink-0">{new Date(song.downloaded_at).toLocaleDateString()}</span>
     </div>
@@ -188,7 +241,7 @@ function PlaylistMembershipModal({
   return (
     <Dialog.Root open={open} onOpenChange={closeModal}>
       <Dialog.Trigger asChild>
-        <Button variant={iconOnly ? "ghost" : "outline"} size={iconOnly ? "icon" : "sm"} aria-label={label}>
+        <Button variant={iconOnly ? "ghost" : "outline"} size={iconOnly ? "iconSm" : "sm"} aria-label={label}>
           <ListPlus size={16} />
           {iconOnly ? null : label}
         </Button>

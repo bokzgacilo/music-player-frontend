@@ -73,4 +73,4 @@ Each browser has its own playback state:
 - play/pause
 - seek position
 
-The library, playlists, downloads, recycle bin, MP3 files, and thumbnails are shared through the backend API.
+The library, playlists, downloads, MP3 files, and thumbnails are shared through the backend API.

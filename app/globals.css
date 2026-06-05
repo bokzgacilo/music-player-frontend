@@ -70,23 +70,16 @@ body {
 }
 
 .song-title-marquee-track {
-  display: inline-flex;
-  width: max-content;
-  gap: 2rem;
+  display: block;
 }
 
 .song-title-marquee:hover .song-title-marquee-track {
-  max-width: none;
-  animation: song-title-scroll 8s linear infinite;
+  animation: none;
 }
 
-@keyframes song-title-scroll {
-  0%,
-  15% {
-    transform: translateX(0);
-  }
-  85%,
-  100% {
-    transform: translateX(calc(-50% - 1rem));
-  }
+.song-title-two-line {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }

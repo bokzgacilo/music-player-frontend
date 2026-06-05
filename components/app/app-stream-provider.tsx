@@ -1,10 +1,10 @@
 "use client";
 
 import type * as React from "react";
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
-import type { ConnectedClient, DownloadJob } from "@/lib/types";
+import type { ConnectedClient, DownloadJob, Song } from "@/lib/types";
 
 type AppStreamStatus = "connecting" | "open" | "closed";
 
@@ -12,6 +12,14 @@ type AppStreamContextValue = {
   jobs: DownloadJob[];
   clients: ConnectedClient[];
   status: AppStreamStatus;
+  sendPlayerState: (state: PlayerState) => void;
+};
+
+type PlayerState = {
+  song: Pick<Song, "id" | "title" | "artist"> | null;
+  position: number;
+  duration: number | null;
+  playing: boolean;
 };
 
 const AppStreamContext = createContext<AppStreamContextValue | undefined>(undefined);
@@ -75,7 +83,13 @@ export function AppStreamProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pathname]);
 
-  const value = useMemo(() => ({ jobs, clients, status }), [clients, jobs, status]);
+  const sendPlayerState = useCallback((state: PlayerState) => {
+    const socket = socketRef.current;
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type: "player:update", ...state }));
+  }, []);
+
+  const value = useMemo(() => ({ jobs, clients, status, sendPlayerState }), [clients, jobs, sendPlayerState, status]);
 
   return <AppStreamContext.Provider value={value}>{children}</AppStreamContext.Provider>;
 }
